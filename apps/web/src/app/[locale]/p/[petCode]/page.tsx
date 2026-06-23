@@ -20,7 +20,8 @@ interface PublicPetPageProps {
 
 // Fetch pet data from API or fall back to mock data
 async function getPetData(petCode: string) {
-  const API_URL = process.env.API_URL || 'http://localhost:3001';
+  const rawApiUrl = process.env.API_URL || 'http://localhost:3001';
+  const API_URL = rawApiUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
   try {
     const res = await fetch(`${API_URL}/api/pets/public/${petCode}`, {
       next: { revalidate: 60 }, // Cache for 60 seconds
