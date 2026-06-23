@@ -20,6 +20,8 @@ import {
   HardDrive
 } from 'lucide-react';
 
+export const runtime = 'edge';
+
 interface Stats {
   users: number;
   pets: number;

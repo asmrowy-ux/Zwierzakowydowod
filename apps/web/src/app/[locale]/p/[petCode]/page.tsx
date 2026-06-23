@@ -6,6 +6,8 @@ import Card from '@/components/ui/Card';
 import { Phone, Mail, Heart, AlertTriangle, MessageSquare, Send, Check } from 'lucide-react';
 import { FinderForm } from './FinderForm';
 
+export const runtime = 'edge';
+
 interface PublicPetPageProps {
   params: Promise<{
     locale: string;

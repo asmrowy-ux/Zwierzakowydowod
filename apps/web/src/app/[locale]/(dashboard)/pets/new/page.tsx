@@ -9,6 +9,8 @@ import Input, { Select, Textarea } from '@/components/ui/Input';
 import { ArrowLeft, ArrowRight, Save, Image, Check, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
+export const runtime = 'edge';
+
 export default function NewPetPage() {
   const t = useTranslations('pet');
   const tCommon = useTranslations('common');

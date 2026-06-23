@@ -8,6 +8,8 @@ import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 
+export const runtime = 'edge';
+
 export default function LoginPage() {
   const t = useTranslations('auth');
   const router = useRouter();

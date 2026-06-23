@@ -10,6 +10,8 @@ import { Modal } from '@/components/ui/Modal';
 import { QRCodeSVG } from 'qrcode.react';
 import { Plus, QrCode, Edit2, Eye, Trash2, Calendar, MapPin, Settings } from 'lucide-react';
 
+export const runtime = 'edge';
+
 interface Pet {
   id: string;
   petCode: string;

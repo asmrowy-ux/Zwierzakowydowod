@@ -6,6 +6,8 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { Scan, Map, Calendar, ArrowRight, ShieldCheck, HelpCircle } from 'lucide-react';
 
+export const runtime = 'edge';
+
 export default function LandingPage() {
   const tCommon = useTranslations('common');
   const tLanding = useTranslations('landing');
