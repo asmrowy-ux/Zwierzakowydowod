@@ -68,19 +68,24 @@ app.use((_req, res) => {
 // Global Error Handler
 app.use(errorHandler);
 
-// Start server
-const server = app.listen(PORT, () => {
-  console.log(`🐾 PET ID API server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-});
+export { app };
+export default app;
 
-// Graceful shutdown
-const shutdown = () => {
-  console.log('Shutting down gracefully...');
-  server.close(() => {
-    console.log('Process terminated.');
-    process.exit(0);
+// Start server locally only in development
+if (process.env.NODE_ENV !== 'production') {
+  const server = app.listen(PORT, () => {
+    console.log(`🐾 PET ID API server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
   });
-};
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+  // Graceful shutdown
+  const shutdown = () => {
+    console.log('Shutting down gracefully...');
+    server.close(() => {
+      console.log('Process terminated.');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}
