@@ -9,31 +9,48 @@ export const createPetSchema = z.object({
   species: z.enum(['dog', 'cat', 'bird', 'rabbit', 'hamster', 'fish', 'reptile', 'other'], {
     errorMap: () => ({ message: 'Invalid species' }),
   }),
-  breed: z.string().max(100).optional(),
+  breed: z.string().max(100).optional().nullable(),
   birthDate: z
     .string()
     .datetime({ message: 'Invalid date format' })
     .optional()
-    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional()),
-  gender: z.enum(['male', 'female', 'unknown']).optional(),
-  weight: z.number().positive('Weight must be positive').max(500).optional(),
-  color: z.string().max(50).optional(),
-  microchipNumber: z.string().max(50).optional(),
-  customEmoji: z.string().max(4).optional(),
-  finderNote: z.string().max(500).optional(),
+    .nullable()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional().nullable()),
+  gender: z.enum(['male', 'female', 'unknown']).optional().nullable(),
+  weight: z.number().positive('Weight must be positive').max(500).optional().nullable(),
+  color: z.string().max(50).optional().nullable(),
+  microchipNumber: z.string().max(50).optional().nullable(),
+  customEmoji: z.string().max(4).optional().nullable(),
+  finderNote: z.string().max(500).optional().nullable(),
   medicalInfo: z
     .object({
-      allergies: z.array(z.string()).optional(),
-      medications: z.array(z.string()).optional(),
-      conditions: z.array(z.string()).optional(),
-      bloodType: z.string().optional(),
-      veterinarian: z.string().optional(),
-      insuranceProvider: z.string().optional(),
-      insuranceNumber: z.string().optional(),
+      allergies: z.array(z.string()).optional().nullable(),
+      medications: z.array(z.string()).optional().nullable(),
+      conditions: z.array(z.string()).optional().nullable(),
+      bloodType: z.string().optional().nullable(),
+      veterinarian: z.string().optional().nullable(),
+      insuranceProvider: z.string().optional().nullable(),
+      insuranceNumber: z.string().optional().nullable(),
     })
-    .optional(),
-  profilePhotoUrl: z.string().url().optional(),
-  backgroundUrl: z.string().url().optional(),
+    .optional()
+    .nullable(),
+  profilePhotoUrl: z.string().optional().nullable(),
+  backgroundUrl: z.string().optional().nullable(),
+  visibilitySettings: z
+    .object({
+      showName: z.boolean().optional(),
+      showSpecies: z.boolean().optional(),
+      showPhoto: z.boolean().optional(),
+      showPhone: z.boolean().optional(),
+      showEmail: z.boolean().optional(),
+      showAddress: z.boolean().optional(),
+      showMedicalInfo: z.boolean().optional(),
+      showMicrochip: z.boolean().optional(),
+      showFinderNote: z.boolean().optional(),
+      showFoundButton: z.boolean().optional(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export const updatePetSchema = createPetSchema.partial();

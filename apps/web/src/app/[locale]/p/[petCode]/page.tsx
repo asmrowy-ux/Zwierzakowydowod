@@ -18,7 +18,7 @@ interface PublicPetPageProps {
   }>;
 }
 
-// Fetch pet data from API or fall back to mock data
+// Fetch pet data from API
 async function getPetData(petCode: string) {
   const rawApiUrl = process.env.API_URL || 'http://localhost:3001';
   const API_URL = rawApiUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
@@ -31,43 +31,7 @@ async function getPetData(petCode: string) {
       return result.data;
     }
   } catch (e) {
-    console.error('API connection failed, falling back to mock data for layout demo');
-  }
-
-  // Fallback mock data for visual demonstration
-  if (petCode.startsWith('PET-')) {
-    return {
-      id: 'mock-id',
-      petCode,
-      name: 'Reksio',
-      species: 'dog',
-      breed: 'Golden Retriever',
-      status: 'lost',
-      profilePhotoUrl: null,
-      finderNote: 'Bardzo przyjacielski pies. Boi się burzy. Proszę o natychmiastowy kontakt telefoniczny!',
-      microchipNumber: '900115000123456',
-      medicalInfo: {
-        allergies: ['Kurczak'],
-        diseases: ['Padaczka'],
-        medications: ['Luminal 2x dziennie'],
-      },
-      visibilitySettings: {
-        showName: true,
-        showSpecies: true,
-        showPhoto: true,
-        showPhone: true,
-        showEmail: true,
-        showAddress: false,
-        showMedicalInfo: true,
-        showMicrochip: true,
-        showFinderNote: true,
-        showFoundButton: true,
-      },
-      owner: {
-        phone: '+48 500 600 700',
-        email: 'wlasciciel@example.com',
-      },
-    };
+    console.error('API connection failed:', e);
   }
 
   return null;

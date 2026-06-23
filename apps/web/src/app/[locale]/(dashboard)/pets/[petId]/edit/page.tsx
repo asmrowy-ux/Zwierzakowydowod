@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -11,13 +11,25 @@ import { Badge } from '@/components/ui/Badge';
 
 export const runtime = 'edge';
 
-export default function NewPetPage() {
+interface EditPetPageProps {
+  params: Promise<{
+    locale: string;
+    petId: string;
+  }>;
+}
+
+export default function EditPetPage({ params }: EditPetPageProps) {
   const t = useTranslations('pet');
   const tCommon = useTranslations('common');
   const router = useRouter();
   
+  // Resolve params
+  const resolvedParams = React.use(params);
+  const petId = resolvedParams.petId;
+
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingPet, setIsLoadingPet] = useState(true);
 
   // Form states
   const [name, setName] = useState('');
@@ -33,7 +45,7 @@ export default function NewPetPage() {
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Visibility Checkboxes (Ptaszki)
+  // Visibility Checkboxes
   const [visibility, setVisibility] = useState({
     showName: true,
     showSpecies: true,
@@ -46,6 +58,63 @@ export default function NewPetPage() {
     showFinderNote: true,
     showFoundButton: true,
   });
+
+  useEffect(() => {
+    const fetchPetData = async () => {
+      const token = localStorage.getItem('pet-id-token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/pets/${petId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch pet details');
+        }
+
+        const result = await res.json();
+        const pet = result.data.pet;
+
+        setName(pet.name || '');
+        setSpecies(pet.species || 'dog');
+        setBreed(pet.breed || '');
+        if (pet.birthDate) {
+          const d = new Date(pet.birthDate);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          setBirthDate(`${year}-${month}-${day}`);
+        }
+        setGender(pet.gender || 'unknown');
+        setWeight(pet.weight ? String(pet.weight) : '');
+        setColor(pet.color || '');
+        setMicrochipNumber(pet.microchipNumber || '');
+        setFinderNote(pet.finderNote || '');
+        setProfilePhotoUrl(pet.profilePhotoUrl || null);
+
+        if (pet.visibilitySettings) {
+          setVisibility((prev) => ({
+            ...prev,
+            ...pet.visibilitySettings,
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching pet data:', err);
+        alert('Błąd podczas pobierania danych zwierzaka. Powrót do pulpitu...');
+        router.push('/dashboard');
+      } finally {
+        setIsLoadingPet(false);
+      }
+    };
+
+    fetchPetData();
+  }, [petId, router]);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,13 +180,15 @@ export default function NewPetPage() {
     e.preventDefault();
     setIsLoading(true);
 
+    const token = localStorage.getItem('pet-id-token');
+    if (!token) return;
+
     try {
-      // In production: POST /api/pets
-      const response = await fetch('/api/pets', {
-        method: 'POST',
+      const response = await fetch(`/api/pets/${petId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('pet-id-token') || ''}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           name,
@@ -137,17 +208,24 @@ export default function NewPetPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error?.message || 'Failed to save pet');
+        throw new Error(result.error?.message || 'Failed to update pet');
       }
 
       router.push('/dashboard');
     } catch (err: any) {
-      alert(err.message || 'Error creating pet. Redirecting to dashboard...');
-      router.push('/dashboard');
+      alert(err.message || 'Error updating pet.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isLoadingPet) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center relative z-10">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-pet-amber-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 relative z-10 animate-fade-in">
@@ -160,10 +238,10 @@ export default function NewPetPage() {
         </Button>
         <div>
           <h1 className="font-display text-2xl font-bold text-slate-800 dark:text-white">
-            {t('stepBasicInfo')}
+            Edycja: {name}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Create a secure identifier profile for your pet.
+            Zaktualizuj dane i ustawienia widoczności swojego zwierzaka.
           </p>
         </div>
       </div>
@@ -328,7 +406,7 @@ export default function NewPetPage() {
             </div>
           )}
 
-          {/* Step 3: Visibility Flags (Ptaszki) & Preview */}
+          {/* Step 3: Visibility Flags & Preview */}
           {step === 3 && (
             <div className="space-y-6">
               <div>
@@ -424,7 +502,7 @@ export default function NewPetPage() {
                   </div>
 
                   {visibility.showFinderNote && finderNote && (
-                    <div className="p-3 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                    <div className="p-3 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-slate-700 dark:text-slate-350 leading-relaxed italic">
                       📢 {finderNote}
                     </div>
                   )}

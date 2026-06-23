@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -16,7 +16,7 @@ interface Pet {
   id: string;
   petCode: string;
   name: string;
-  species: 'dog' | 'cat' | 'bird' | 'other';
+  species: 'dog' | 'cat' | 'bird' | 'rabbit' | 'other';
   breed: string;
   status: 'home' | 'walking' | 'lost';
   profilePhotoUrl: string | null;
@@ -25,52 +25,123 @@ interface Pet {
 export default function DashboardPage() {
   const t = useTranslations('dashboard');
   const tPet = useTranslations('pet');
-  const [userName, setUserName] = useState('Jan Kowalski');
+  const tStatus = useTranslations('status');
+  const router = useRouter();
   
-  // Mock data for initial pets
-  const [pets, setPets] = useState<Pet[]>([
-    {
-      id: '1',
-      petCode: 'PET-A1F92B',
-      name: 'Reksio',
-      species: 'dog',
-      breed: 'Golden Retriever',
-      status: 'home',
-      profilePhotoUrl: null,
-    },
-    {
-      id: '2',
-      petCode: 'PET-Z8Y3X1',
-      name: 'Luna',
-      species: 'cat',
-      breed: 'Brytyjski',
-      status: 'lost',
-      profilePhotoUrl: null,
-    },
-  ]);
+  const [userName, setUserName] = useState('');
+  const [pets, setPets] = useState<Pet[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
-  // Load actual user or state in production
   useEffect(() => {
-    try {
-      const storedToken = localStorage.getItem('pet-id-token');
-      // Here you would normally decode the token or fetch user profile from API.
-      // We will fall back to mock data but allow future API connection.
-    } catch (e) {}
-  }, []);
+    const fetchDashboardData = async () => {
+      const token = localStorage.getItem('pet-id-token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
 
-  const handleStatusChange = (petId: string, nextStatus: 'home' | 'walking' | 'lost') => {
+      try {
+        // 1. Fetch User Profile Info
+        const userRes = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!userRes.ok) {
+          throw new Error('Unauthorized or invalid token');
+        }
+
+        const userData = await userRes.json();
+        setUserName(userData.data.user.displayName);
+
+        // 2. Fetch User Pets
+        const petsRes = await fetch('/api/pets', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (petsRes.ok) {
+          const petsData = await petsRes.json();
+          setPets(petsData.data.pets);
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        localStorage.removeItem('pet-id-token');
+        router.push('/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [router]);
+
+  const handleStatusChange = async (petId: string, nextStatus: 'home' | 'walking' | 'lost') => {
+    const token = localStorage.getItem('pet-id-token');
+    if (!token) return;
+
+    // Optimistic update
     setPets((prev) =>
       prev.map((pet) => (pet.id === petId ? { ...pet, status: nextStatus } : pet))
     );
-    // In production, trigger fetch `/api/pets/${petId}/status` with body: { status: nextStatus }
+
+    try {
+      const res = await fetch(`/api/pets/${petId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update status');
+      }
+    } catch (err) {
+      console.error('Failed to save status update:', err);
+      alert('Error updating status on server. Reverting...');
+      
+      // Revert status from server
+      const petsRes = await fetch('/api/pets', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (petsRes.ok) {
+        const petsData = await petsRes.json();
+        setPets(petsData.data.pets);
+      }
+    }
   };
 
-  const handleDeletePet = (petId: string) => {
-    if (confirm('Are you sure you want to delete this pet?')) {
+  const handleDeletePet = async (petId: string) => {
+    if (!confirm('Czy na pewno chcesz usunąć tego pupila?')) {
+      return;
+    }
+
+    const token = localStorage.getItem('pet-id-token');
+    if (!token) return;
+
+    try {
+      const res = await fetch(`/api/pets/${petId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete pet');
+      }
+
       setPets((prev) => prev.filter((p) => p.id !== petId));
+    } catch (err) {
+      console.error('Delete failed:', err);
+      alert('Nie udało się usunąć pupila.');
     }
   };
 
@@ -86,6 +157,14 @@ export default function DashboardPage() {
     return `/p/${petCode}`;
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center relative z-10">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-pet-amber-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-fade-in relative z-10">
       {/* Header */}
@@ -99,29 +178,28 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <Button asChild>
-          <Link href="/pets/new" className="flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            {t('addPet')}
+        <Button asChild className="shadow-pet flex items-center gap-2">
+          <Link href="/pets/new">
+            <Plus className="w-5 h-5" />
+            <span>{t('addPet')}</span>
           </Link>
         </Button>
       </div>
 
-      {/* Grid */}
+      {/* Grid of Pets */}
       {pets.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40">
-          <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-3xl mb-4">
-            🐾
+        <Card className="glass p-12 text-center max-w-md mx-auto space-y-4">
+          <div className="w-16 h-16 rounded-full bg-pet-amber-50 dark:bg-slate-800 flex items-center justify-center text-4xl mx-auto shadow-inner">
+            🐶
           </div>
-          <h3 className="font-display text-xl font-bold text-slate-800 dark:text-white mb-2">
-            {t('noPets')}
-          </h3>
-          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mb-6">
-            {t('noPetsDesc')}
-          </p>
-          <Button asChild>
-            <Link href="/pets/new" className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
+          <div>
+            <CardTitle>{t('noPets')}</CardTitle>
+            <CardDescription className="mt-1">
+              {t('noPetsDesc')}
+            </CardDescription>
+          </div>
+          <Button asChild className="w-full">
+            <Link href="/pets/new">
               {t('addPet')}
             </Link>
           </Button>
@@ -136,14 +214,18 @@ export default function DashboardPage() {
                 {/* Status Badge */}
                 <div className="absolute top-4 right-4">
                   <Badge variant={pet.status}>
-                    {tPet(pet.status)}
+                    {tStatus(pet.status)}
                   </Badge>
                 </div>
 
                 <div className="flex gap-4">
                   {/* Photo Thumbnail */}
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-pet-amber-100 to-pet-orange-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-3xl shadow-sm shrink-0 border border-slate-200/50 dark:border-slate-700/50">
-                    {pet.species === 'dog' ? '🐶' : pet.species === 'cat' ? '🐱' : '🐾'}
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-pet-amber-100 to-pet-orange-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-3xl shadow-sm shrink-0 border border-slate-200/50 dark:border-slate-700/50 overflow-hidden relative">
+                    {pet.profilePhotoUrl ? (
+                      <img src={pet.profilePhotoUrl} alt={pet.name} className="w-full h-full object-cover" />
+                    ) : (
+                      pet.species === 'dog' ? '🐶' : pet.species === 'cat' ? '🐱' : '🐾'
+                    )}
                   </div>
 
                   {/* Info */}
@@ -180,7 +262,7 @@ export default function DashboardPage() {
                             : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                         }`}
                       >
-                        {tPet(s)}
+                        {tStatus(s)}
                       </button>
                     ))}
                   </div>

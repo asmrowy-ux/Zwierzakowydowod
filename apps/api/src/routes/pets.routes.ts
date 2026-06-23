@@ -111,6 +111,7 @@ router.post(
           medicalInfo: req.body.medicalInfo || {},
           profilePhotoUrl: req.body.profilePhotoUrl || null,
           backgroundUrl: req.body.backgroundUrl || null,
+          visibilitySettings: req.body.visibilitySettings || undefined,
         },
       });
 
@@ -179,7 +180,7 @@ router.put(
       const allowedFields = [
         'name', 'species', 'breed', 'gender', 'weight', 'color',
         'microchipNumber', 'customEmoji', 'finderNote', 'medicalInfo',
-        'profilePhotoUrl', 'backgroundUrl',
+        'profilePhotoUrl', 'backgroundUrl', 'visibilitySettings',
       ];
 
       for (const field of allowedFields) {
@@ -261,30 +262,47 @@ router.get(
       }
 
       // Apply visibility settings
-      const visibility = pet.visibilitySettings as Record<string, boolean>;
+      const visibility = (pet.visibilitySettings || {}) as Record<string, boolean>;
+      const isVisible = (key: string) => {
+        const mapping: Record<string, string> = {
+          name: 'showName',
+          species: 'showSpecies',
+          breed: 'showBreed',
+          color: 'showColor',
+          microchip: 'showMicrochip',
+          photo: 'showPhoto',
+          finderNote: 'showFinderNote',
+          ownerEmail: 'showEmail',
+          ownerPhone: 'showPhone',
+          medicalInfo: 'showMedicalInfo',
+        };
+        const feKey = mapping[key] || `show${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+        return visibility[key] !== false && visibility[feKey] !== false;
+      };
+
       const publicPet: Record<string, unknown> = {
         petCode: pet.petCode,
         status: pet.status,
         customEmoji: pet.customEmoji,
-        finderNote: pet.finderNote,
+        finderNote: isVisible('finderNote') ? pet.finderNote : null,
         themeSettings: pet.themeSettings,
-        profilePhotoUrl: visibility.photo !== false ? pet.profilePhotoUrl : null,
+        profilePhotoUrl: isVisible('photo') ? pet.profilePhotoUrl : null,
         backgroundUrl: pet.backgroundUrl,
       };
 
-      if (visibility.name !== false) publicPet.name = pet.name;
-      if (visibility.species !== false) publicPet.species = pet.species;
-      if (visibility.breed !== false) publicPet.breed = pet.breed;
-      if (visibility.color !== false) publicPet.color = pet.color;
-      if (visibility.microchip !== false) publicPet.microchipNumber = pet.microchipNumber;
-      if (visibility.photo !== false) publicPet.photos = (pet as any).photos;
+      if (isVisible('name')) publicPet.name = pet.name;
+      if (isVisible('species')) publicPet.species = pet.species;
+      if (isVisible('breed')) publicPet.breed = pet.breed;
+      if (isVisible('color')) publicPet.color = pet.color;
+      if (isVisible('microchip')) publicPet.microchipNumber = pet.microchipNumber;
+      if (isVisible('photo')) publicPet.photos = (pet as any).photos;
 
       const ownerInfo: Record<string, unknown> = {
         displayName: (pet as any).owner.displayName,
         avatarUrl: (pet as any).owner.avatarUrl,
       };
-      if (visibility.ownerEmail !== false) ownerInfo.email = (pet as any).owner.email;
-      if (visibility.ownerPhone !== false) ownerInfo.phone = (pet as any).owner.phone;
+      if (isVisible('ownerEmail')) ownerInfo.email = (pet as any).owner.email;
+      if (isVisible('ownerPhone')) ownerInfo.phone = (pet as any).owner.phone;
 
       publicPet.owner = ownerInfo;
 
