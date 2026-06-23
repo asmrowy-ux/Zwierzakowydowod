@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String   @id @default(uuid()) @map("id")
+  email          String   @unique
+  passwordHash   String?  @map("password_hash")
+  displayName    String   @map("display_name")
+  avatarUrl      String?  @map("avatar_url")
+  phone          String?
+  locale         String   @default("pl")
+  authProvider   String   @default("local") @map("auth_provider")
+  authProviderId String?  @map("auth_provider_id")
+  role           String   @default("USER")
+  settings       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  pets           Pet[]
+  caretaking     PetCaretaker[]
+  friendsSent    Friendship[]   @relation("FriendshipRequester")
+  friendsReceived Friendship[]  @relation("FriendshipAddressee")
+  refreshTokens  RefreshToken[]
+
+  @@map("users")
+}
+
+model Pet {
+  id                 String   @id @default(uuid())
+  ownerId            String   @map("owner_id")
+  petCode            String   @unique @map("pet_code")
+  name               String
+  species            String
+  breed              String?
+  birthDate          DateTime? @map("birth_date")
+  gender             String?
+  weight             Float?
+  color              String?
+  microchipNumber    String?  @map("microchip_number")
+  status             String   @default("home")
+  customEmoji        String?  @map("custom_emoji")
+  medicalInfo        Json     @default("{}") @map("medical_info")
+  visibilitySettings Json     @default("{\"name\":true,\"photo\":true,\"species\":true,\"breed\":true,\"color\":true,\"microchip\":false,\"ownerPhone\":false,\"ownerEmail\":true}") @map("visibility_settings")
+  themeSettings      Json     @default("{\"primaryColor\":\"#6C63FF\",\"layout\":\"classic\"}") @map("theme_settings")
+  finderNote         String?  @map("finder_note")
+  profilePhotoUrl    String?  @map("profile_photo_url")
+  backgroundUrl      String?  @map("background_url")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  owner        User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  photos       PetPhoto[]
+  notes        PetNote[]
+  events       CalendarEvent[]
+  locations    PetLocation[]
+  caretakers   PetCaretaker[]
+  foundReports FoundReport[]
+
+  @@index([ownerId])
+  @@index([petCode])
+  @@map("pets")
+}
+
+model PetPhoto {
+  id         String   @id @default(uuid())
+  petId      String   @map("pet_id")
+  url        String
+  album      String?
+  caption    String?
+  isFavorite Boolean  @default(false) @map("is_favorite")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@map("pet_photos")
+}
+
+model PetNote {
+  id          String   @id @default(uuid())
+  petId       String   @map("pet_id")
+  title       String
+  content     String
+  category    String   @default("general")
+  isPinned    Boolean  @default(false) @map("is_pinned")
+  attachments Json     @default("[]")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@map("pet_notes")
+}
+
+model CalendarEvent {
+  id                    String   @id @default(uuid())
+  petId                 String   @map("pet_id")
+  title                 String
+  description           String?
+  eventType             String   @map("event_type")
+  eventDate             DateTime @map("event_date")
+  recurrence            String?
+  reminderEnabled       Boolean  @default(false) @map("reminder_enabled")
+  reminderMinutesBefore Int      @default(30) @map("reminder_minutes_before")
+  clinicName            String?  @map("clinic_name")
+  vetName               String?  @map("vet_name")
+  metadata              Json     @default("{}") @map("metadata")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([eventDate])
+  @@map("calendar_events")
+}
+
+model Friendship {
+  id          String   @id @default(uuid())
+  requesterId String   @map("requester_id")
+  addresseeId String   @map("addressee_id")
+  status      String   @default("pending")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId])
+  @@index([addresseeId])
+  @@map("friendships")
+}
+
+model PetLocation {
+  id         String   @id @default(uuid())
+  petId      String   @map("pet_id")
+  latitude   Float
+  longitude  Float
+  accuracy   Float?
+  source     String   @default("gps")
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([recordedAt])
+  @@map("pet_locations")
+}
+
+model PetCaretaker {
+  id        String   @id @default(uuid())
+  petId     String   @map("pet_id")
+  userId    String   @map("user_id")
+  role      String   @default("viewer")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  pet  Pet  @relation(fields: [petId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([petId, userId])
+  @@index([petId])
+  @@index([userId])
+  @@map("pet_caretakers")
+}
+
+model FoundReport {
+  id          String   @id @default(uuid())
+  petId       String   @map("pet_id")
+  finderName  String?  @map("finder_name")
+  finderPhone String?  @map("finder_phone")
+  finderEmail String?  @map("finder_email")
+  latitude    Float?
+  longitude   Float?
+  message     String?
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@map("found_reports")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
