@@ -48,6 +48,7 @@ export default function DashboardPage() {
         const userRes = await fetch('/api/auth/me', {
           headers: {
             'Authorization': `Bearer ${token}`,
+            'X-Authorization': `Bearer ${token}`,
           },
         });
 
@@ -62,6 +63,7 @@ export default function DashboardPage() {
         const petsRes = await fetch('/api/pets', {
           headers: {
             'Authorization': `Bearer ${token}`,
+            'X-Authorization': `Bearer ${token}`,
           },
         });
 
@@ -96,6 +98,7 @@ export default function DashboardPage() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'X-Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ status: nextStatus }),
       });
@@ -109,7 +112,10 @@ export default function DashboardPage() {
       
       // Revert status from server
       const petsRes = await fetch('/api/pets', {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Authorization': `Bearer ${token}`,
+        },
       });
       if (petsRes.ok) {
         const petsData = await petsRes.json();
@@ -131,6 +137,7 @@ export default function DashboardPage() {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'X-Authorization': `Bearer ${token}`,
         },
       });
 

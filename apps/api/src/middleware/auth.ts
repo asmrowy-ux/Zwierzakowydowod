@@ -32,7 +32,10 @@ export async function authenticate(
   next: NextFunction
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
+    let authHeader = req.headers.authorization;
+    if (!authHeader && req.headers['x-authorization']) {
+      authHeader = req.headers['x-authorization'] as string;
+    }
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedError('Missing or invalid Authorization header');
@@ -91,7 +94,10 @@ export async function optionalAuth(
   next: NextFunction
 ): Promise<void> {
   try {
-    const authHeader = req.headers.authorization;
+    let authHeader = req.headers.authorization;
+    if (!authHeader && req.headers['x-authorization']) {
+      authHeader = req.headers['x-authorization'] as string;
+    }
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return next();

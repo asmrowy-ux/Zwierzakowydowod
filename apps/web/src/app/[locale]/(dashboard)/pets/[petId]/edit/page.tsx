@@ -71,6 +71,7 @@ export default function EditPetPage({ params }: EditPetPageProps) {
         const res = await fetch(`/api/pets/${petId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
+            'X-Authorization': `Bearer ${token}`,
           },
         });
 
@@ -189,6 +190,7 @@ export default function EditPetPage({ params }: EditPetPageProps) {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'X-Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           name,

@@ -118,6 +118,7 @@ export default function NewPetPage() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('pet-id-token') || ''}`,
+          'X-Authorization': `Bearer ${localStorage.getItem('pet-id-token') || ''}`,
         },
         body: JSON.stringify({
           name,
