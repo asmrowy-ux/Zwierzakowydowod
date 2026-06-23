@@ -6,7 +6,7 @@ import { useRouter, Link } from '@/i18n/navigation';
 import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input, { Select, Textarea } from '@/components/ui/Input';
-import { ArrowLeft, ArrowRight, Save, Image, Check, Eye } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Image as ImageIcon, Check, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 export const runtime = 'edge';
@@ -48,48 +48,71 @@ export default function NewPetPage() {
   });
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Plik jest zbyt duży. Maksymalny rozmiar to 5MB.');
-      return;
-    }
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Plik jest zbyt duży. Maksymalny rozmiar to 5MB.');
+        return;
+      }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new globalThis.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 400;
-        const MAX_HEIGHT = 400;
-        let width = img.width;
-        let height = img.height;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 400;
+              const MAX_HEIGHT = 400;
+              let width = img.width;
+              let height = img.height;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height *= MAX_WIDTH / width;
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width *= MAX_HEIGHT / height;
+                  height = MAX_HEIGHT;
+                }
+              }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-          setProfilePhotoUrl(dataUrl);
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                setProfilePhotoUrl(dataUrl);
+              }
+            } catch (err: any) {
+              console.error('Canvas processing error:', err);
+              alert('Błąd przetwarzania obrazu: ' + err.message);
+            }
+          };
+          img.onerror = (err) => {
+            console.error('Image load error:', err);
+            alert('Nie udało się wczytać pliku graficznego.');
+          };
+          img.src = event.target?.result as string;
+        } catch (err: any) {
+          console.error('Reader onload error:', err);
+          alert('Błąd odczytu pliku obrazu.');
         }
       };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+      reader.onerror = (err) => {
+        console.error('FileReader error:', err);
+        alert('Błąd odczytu pliku z dysku.');
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error('Photo select error:', err);
+      alert('Wystąpił błąd podczas wyboru zdjęcia: ' + err.message);
+    }
   };
 
   const handleVisibilityChange = (key: keyof typeof visibility) => {
@@ -302,7 +325,7 @@ export default function NewPetPage() {
                 ) : (
                   <>
                     <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 mb-4">
-                      <Image className="w-5 h-5 text-slate-500" />
+                      <ImageIcon className="w-5 h-5 text-slate-500" />
                     </div>
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-350">
                       {t('dragPhoto')}
