@@ -71,8 +71,8 @@ app.use(errorHandler);
 export { app };
 export default app;
 
-// Start server locally only in development
-if (process.env.NODE_ENV !== 'production') {
+// Start server (runs everywhere except when imported as a Cloudflare Worker)
+if (process.env.IS_WORKER !== 'true') {
   const server = app.listen(PORT, () => {
     console.log(`🐾 PET ID API server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
   });

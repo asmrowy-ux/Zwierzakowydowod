@@ -11,6 +11,7 @@ export default {
     if (env.JWT_SECRET) process.env.JWT_SECRET = env.JWT_SECRET;
     if (env.JWT_REFRESH_SECRET) process.env.JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET;
     
+    process.env.IS_WORKER = 'true';
     process.env.NODE_ENV = 'production';
 
     return handler(request, ctx);
