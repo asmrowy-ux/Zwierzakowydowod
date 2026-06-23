@@ -31,7 +31,7 @@ router.get(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId } = req.params;
+      const petId = req.params.petId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const { album, favorites, page = '1', limit = '50' } = req.query;
@@ -93,7 +93,7 @@ router.post(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId } = req.params;
+      const petId = req.params.petId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const { url, album, caption, isFavorite, sortOrder } = req.body;
@@ -115,7 +115,7 @@ router.post(
           album: album || null,
           caption: caption || null,
           isFavorite: isFavorite || false,
-          sortOrder: sortOrder ?? ((maxSort._max.sortOrder || 0) + 1),
+          sortOrder: sortOrder ?? ((maxSort?._max?.sortOrder || 0) + 1),
         },
       });
 
@@ -135,7 +135,8 @@ router.delete(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId, photoId } = req.params;
+      const petId = req.params.petId as string;
+      const photoId = req.params.photoId as string;
       const { isOwner } = await verifyPetAccess(petId, req.user!.id);
 
       if (!isOwner) {
@@ -170,7 +171,8 @@ router.put(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId, photoId } = req.params;
+      const petId = req.params.petId as string;
+      const photoId = req.params.photoId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const existingPhoto = await prisma.petPhoto.findFirst({

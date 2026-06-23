@@ -36,7 +36,7 @@ router.get(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId } = req.params;
+      const petId = req.params.petId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const { search, category, page = '1', limit = '20' } = req.query;
@@ -93,7 +93,7 @@ router.post(
   validateBody(createNoteSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId } = req.params;
+      const petId = req.params.petId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const note = await prisma.petNote.create({
@@ -124,7 +124,8 @@ router.put(
   validateBody(updateNoteSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId, noteId } = req.params;
+      const petId = req.params.petId as string;
+      const noteId = req.params.noteId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       // Verify note belongs to pet
@@ -166,7 +167,8 @@ router.delete(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId, noteId } = req.params;
+      const petId = req.params.petId as string;
+      const noteId = req.params.noteId as string;
       const { isOwner } = await verifyPetAccess(petId, req.user!.id);
 
       if (!isOwner) {
@@ -201,7 +203,8 @@ router.put(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId, noteId } = req.params;
+      const petId = req.params.petId as string;
+      const noteId = req.params.noteId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const existingNote = await prisma.petNote.findFirst({

@@ -14,6 +14,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   fullWidth?: boolean;
+  asChild?: boolean;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -35,7 +36,9 @@ const sizeStyles: Record<ButtonSize, string> = {
   lg: 'px-7 py-3.5 text-lg rounded-2xl gap-2.5',
 };
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+import React from 'react';
+
+const Button = forwardRef<any, ButtonProps>(
   (
     {
       variant = 'primary',
@@ -44,6 +47,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       icon,
       iconPosition = 'left',
       fullWidth = false,
+      asChild = false,
       className,
       disabled,
       children,
@@ -51,21 +55,31 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    const combinedClassName = cn(
+      'inline-flex items-center justify-center font-display font-semibold',
+      'transition-all duration-200 ease-out',
+      'hover:scale-[1.02] active:scale-[0.98]',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pet-amber-400 focus-visible:ring-offset-2',
+      'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
+      variantStyles[variant],
+      sizeStyles[size],
+      fullWidth && 'w-full',
+      className
+    );
+
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children as React.ReactElement<any>, {
+        className: cn(combinedClassName, (children.props as any).className),
+        ref: ref,
+        ...props,
+      });
+    }
+
     return (
       <button
         ref={ref}
         disabled={disabled || isLoading}
-        className={cn(
-          'inline-flex items-center justify-center font-display font-semibold',
-          'transition-all duration-200 ease-out',
-          'hover:scale-[1.02] active:scale-[0.98]',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pet-amber-400 focus-visible:ring-offset-2',
-          'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
-          variantStyles[variant],
-          sizeStyles[size],
-          fullWidth && 'w-full',
-          className
-        )}
+        className={combinedClassName}
         {...props}
       >
         {isLoading ? (

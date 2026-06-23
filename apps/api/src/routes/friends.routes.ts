@@ -188,7 +188,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
-      const { friendshipId } = req.params;
+      const friendshipId = req.params.friendshipId as string;
 
       const friendship = await prisma.friendship.findUnique({
         where: { id: friendshipId },
@@ -222,7 +222,7 @@ router.put(
         data: {
           friendship: {
             id: updated.id,
-            friend: updated.requester,
+            friend: (updated as any).requester,
             status: updated.status,
           },
         },
@@ -240,7 +240,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
-      const { friendshipId } = req.params;
+      const friendshipId = req.params.friendshipId as string;
       const { block } = req.body;
 
       const friendship = await prisma.friendship.findUnique({
@@ -290,7 +290,7 @@ router.delete(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
-      const { friendshipId } = req.params;
+      const friendshipId = req.params.friendshipId as string;
 
       const friendship = await prisma.friendship.findUnique({
         where: { id: friendshipId },

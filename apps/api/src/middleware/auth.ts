@@ -13,12 +13,10 @@ export interface AuthUser {
   role: string;
 }
 
-// Extend Express Request
+// Extend Express User
 declare global {
   namespace Express {
-    interface Request {
-      user?: AuthUser;
-    }
+    interface User extends AuthUser {}
   }
 }
 

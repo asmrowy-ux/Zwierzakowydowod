@@ -33,7 +33,7 @@ router.get(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId } = req.params;
+      const petId = req.params.petId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const { startDate, endDate, eventType, page = '1', limit = '50' } = req.query;
@@ -95,7 +95,7 @@ router.post(
   validateBody(createEventSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId } = req.params;
+      const petId = req.params.petId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const event = await prisma.calendarEvent.create({
@@ -131,7 +131,8 @@ router.put(
   validateBody(updateEventSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId, eventId } = req.params;
+      const petId = req.params.petId as string;
+      const eventId = req.params.eventId as string;
       await verifyPetAccess(petId, req.user!.id);
 
       const existingEvent = await prisma.calendarEvent.findFirst({
@@ -179,7 +180,8 @@ router.delete(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { petId, eventId } = req.params;
+      const petId = req.params.petId as string;
+      const eventId = req.params.eventId as string;
       const { isOwner } = await verifyPetAccess(petId, req.user!.id);
 
       if (!isOwner) {

@@ -131,7 +131,7 @@ router.get(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { pet } = await verifyPetAccess(req.params.petId, req.user!.id);
+      const { pet } = await verifyPetAccess(req.params.petId as string, req.user!.id);
 
       const fullPet = await prisma.pet.findUnique({
         where: { id: pet.id },
@@ -169,7 +169,7 @@ router.put(
   validateBody(updatePetSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { isOwner } = await verifyPetAccess(req.params.petId, req.user!.id);
+      const { isOwner } = await verifyPetAccess(req.params.petId as string, req.user!.id);
 
       if (!isOwner) {
         throw new ForbiddenError('Only the owner can update pet details');
@@ -193,7 +193,7 @@ router.put(
       }
 
       const pet = await prisma.pet.update({
-        where: { id: req.params.petId },
+        where: { id: req.params.petId as string },
         data: updateData,
       });
 
@@ -214,14 +214,14 @@ router.delete(
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { isOwner } = await verifyPetAccess(req.params.petId, req.user!.id);
+      const { isOwner } = await verifyPetAccess(req.params.petId as string, req.user!.id);
 
       if (!isOwner) {
         throw new ForbiddenError('Only the owner can delete a pet');
       }
 
       await prisma.pet.delete({
-        where: { id: req.params.petId },
+        where: { id: req.params.petId as string },
       });
 
       res.json({
@@ -243,7 +243,7 @@ router.get(
       const { petCode } = req.params;
 
       const pet = await prisma.pet.findUnique({
-        where: { petCode },
+        where: { petCode: petCode as string },
         include: {
           owner: {
             select: { displayName: true, email: true, phone: true, avatarUrl: true },
@@ -277,14 +277,14 @@ router.get(
       if (visibility.breed !== false) publicPet.breed = pet.breed;
       if (visibility.color !== false) publicPet.color = pet.color;
       if (visibility.microchip !== false) publicPet.microchipNumber = pet.microchipNumber;
-      if (visibility.photo !== false) publicPet.photos = pet.photos;
+      if (visibility.photo !== false) publicPet.photos = (pet as any).photos;
 
       const ownerInfo: Record<string, unknown> = {
-        displayName: pet.owner.displayName,
-        avatarUrl: pet.owner.avatarUrl,
+        displayName: (pet as any).owner.displayName,
+        avatarUrl: (pet as any).owner.avatarUrl,
       };
-      if (visibility.ownerEmail !== false) ownerInfo.email = pet.owner.email;
-      if (visibility.ownerPhone !== false) ownerInfo.phone = pet.owner.phone;
+      if (visibility.ownerEmail !== false) ownerInfo.email = (pet as any).owner.email;
+      if (visibility.ownerPhone !== false) ownerInfo.phone = (pet as any).owner.phone;
 
       publicPet.owner = ownerInfo;
 
@@ -306,7 +306,7 @@ router.put(
   validateBody(updateVisibilitySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { pet, isOwner } = await verifyPetAccess(req.params.petId, req.user!.id);
+      const { pet, isOwner } = await verifyPetAccess(req.params.petId as string, req.user!.id);
 
       if (!isOwner) {
         throw new ForbiddenError('Only the owner can update visibility settings');
@@ -316,7 +316,7 @@ router.put(
       const newVisibility = { ...currentVisibility, ...req.body };
 
       const updated = await prisma.pet.update({
-        where: { id: req.params.petId },
+        where: { id: req.params.petId as string },
         data: { visibilitySettings: newVisibility },
         select: { id: true, visibilitySettings: true },
       });
@@ -339,14 +339,14 @@ router.put(
   validateBody(updateStatusSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { isOwner } = await verifyPetAccess(req.params.petId, req.user!.id);
+      const { isOwner } = await verifyPetAccess(req.params.petId as string, req.user!.id);
 
       if (!isOwner) {
         throw new ForbiddenError('Only the owner can update pet status');
       }
 
       const pet = await prisma.pet.update({
-        where: { id: req.params.petId },
+        where: { id: req.params.petId as string },
         data: { status: req.body.status },
         select: { id: true, name: true, status: true, petCode: true },
       });

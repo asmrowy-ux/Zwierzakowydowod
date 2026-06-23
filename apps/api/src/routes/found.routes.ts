@@ -18,7 +18,7 @@ router.post(
 
       // Find the pet and its owner
       const pet = await prisma.pet.findUnique({
-        where: { petCode },
+        where: { petCode: petCode as string },
         include: {
           owner: {
             select: {
@@ -60,8 +60,8 @@ router.post(
 
       // Send email notification to owner (fire and forget)
       sendFoundPetNotification({
-        ownerEmail: pet.owner.email,
-        ownerName: pet.owner.displayName,
+        ownerEmail: (pet as any).owner.email,
+        ownerName: (pet as any).owner.displayName,
         petName: pet.name,
         petCode: pet.petCode,
         finderName: finderName || undefined,

@@ -83,7 +83,7 @@ router.get('/users', async (req: Request, res: Response, next: NextFunction) => 
 // ─── PUT /users/:id/role ──────────────────────────────────────────
 router.put('/users/:id/role', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { role } = req.body; // 'USER' or 'ADMIN'
 
     const user = await prisma.user.findUnique({ where: { id } });
@@ -109,7 +109,7 @@ router.put('/users/:id/role', async (req: Request, res: Response, next: NextFunc
 // ─── DELETE /users/:id ───────────────────────────────────────────
 router.delete('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
@@ -160,7 +160,7 @@ router.get('/pets', async (req: Request, res: Response, next: NextFunction) => {
 // ─── DELETE /pets/:id ────────────────────────────────────────────
 router.delete('/pets/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const pet = await prisma.pet.findUnique({ where: { id } });
     if (!pet) {
