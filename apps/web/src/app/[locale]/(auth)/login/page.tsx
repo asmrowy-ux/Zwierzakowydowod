@@ -38,7 +38,7 @@ export default function LoginPage() {
       }
 
       // Store tokens
-      localStorage.setItem('pet-id-token', result.data.accessToken);
+      localStorage.setItem('pet-id-token', result.data.tokens.accessToken);
       
       // Redirect to dashboard
       router.push('/dashboard');
