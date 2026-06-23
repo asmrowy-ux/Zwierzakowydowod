@@ -1,6 +1,8 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -11,6 +13,16 @@ export const runtime = 'edge';
 export default function LandingPage() {
   const tCommon = useTranslations('common');
   const tLanding = useTranslations('landing');
+  const router = useRouter();
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('pet-id-token');
+      if (token) {
+        router.replace('/dashboard');
+      }
+    } catch (e) {}
+  }, [router]);
 
   return (
     <div className="relative min-h-screen flex flex-col overflow-hidden paw-bg">
