@@ -288,6 +288,7 @@ router.get(
         themeSettings: pet.themeSettings,
         profilePhotoUrl: isVisible('photo') ? pet.profilePhotoUrl : null,
         backgroundUrl: pet.backgroundUrl,
+        visibilitySettings: visibility,
       };
 
       if (isVisible('name')) publicPet.name = pet.name;
@@ -296,6 +297,7 @@ router.get(
       if (isVisible('color')) publicPet.color = pet.color;
       if (isVisible('microchip')) publicPet.microchipNumber = pet.microchipNumber;
       if (isVisible('photo')) publicPet.photos = (pet as any).photos;
+      if (isVisible('medicalInfo')) publicPet.medicalInfo = pet.medicalInfo;
 
       const ownerInfo: Record<string, unknown> = {
         displayName: (pet as any).owner.displayName,

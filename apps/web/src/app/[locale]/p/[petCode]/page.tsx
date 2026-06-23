@@ -28,7 +28,7 @@ async function getPetData(petCode: string) {
     });
     if (res.ok) {
       const result = await res.json();
-      return result.data;
+      return result.data.pet;
     }
   } catch (e) {
     console.error('API connection failed:', e);
