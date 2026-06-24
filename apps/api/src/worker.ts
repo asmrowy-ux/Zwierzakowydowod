@@ -1,7 +1,9 @@
-import serverless from 'serverless-http';
+import { httpServerHandler } from 'cloudflare:node';
 import app from './index';
+import { createServer } from 'node:http';
 
-const handler = serverless(app);
+const server = createServer(app);
+const handler = httpServerHandler(server);
 
 export default {
   async fetch(request: any, env: any, ctx: any) {
@@ -14,6 +16,6 @@ export default {
     process.env.IS_WORKER = 'true';
     process.env.NODE_ENV = 'production';
 
-    return handler(request, ctx);
+    return handler.fetch(request, env, ctx);
   }
 };
