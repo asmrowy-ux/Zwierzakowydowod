@@ -1,0 +1,8 @@
+{
+  "name": "zwierzakowydowod-api",
+  "compatibility_date": "2026-06-23",
+  "main": "src/worker.ts",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}

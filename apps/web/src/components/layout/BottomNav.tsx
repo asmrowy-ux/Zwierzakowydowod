@@ -13,7 +13,7 @@ export function BottomNav() {
   // Helper to determine if item is active
   const isActive = (path: string) => {
     if (path === '/dashboard') {
-      return pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+      return pathname === '/dashboard' || pathname.startsWith('/pets');
     }
     return pathname === path || pathname.startsWith(path);
   };
@@ -27,20 +27,20 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden glass-strong border-t border-slate-200/80 dark:border-slate-800/80 px-2 pb-safe-bottom shadow-lg">
-      <div className="flex justify-around items-center h-16 max-w-lg mx-auto relative">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden glass-strong border-t border-slate-200/80 dark:border-slate-800/80 shadow-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex justify-around items-center h-14 max-w-lg mx-auto relative px-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           
           if (item.isCenter) {
             return (
-              <div key="center-button" className="relative -top-5 z-50">
+              <div key="center-button" className="relative -top-4 z-50">
                 <Link
                   href={item.href}
-                  className="w-14 h-14 rounded-full bg-gradient-to-tr from-pet-amber-500 to-pet-orange-500 text-white flex items-center justify-center shadow-pet-lg hover:scale-110 active:scale-95 transition-all duration-300 border-4 border-pet-cream dark:border-slate-900"
+                  className="w-12 h-12 rounded-full bg-gradient-to-tr from-pet-amber-500 to-pet-orange-500 text-white flex items-center justify-center shadow-pet-lg hover:scale-110 active:scale-95 transition-all duration-300 border-4 border-pet-cream dark:border-slate-900"
                   aria-label="Add Pet"
                 >
-                  <Plus className="w-7 h-7" />
+                  <Plus className="w-6 h-6" />
                 </Link>
               </div>
             );
@@ -55,11 +55,11 @@ export function BottomNav() {
               className={clsx(
                 'flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-medium transition-all duration-300',
                 active
-                  ? 'text-pet-amber-500 dark:text-pet-amber-400 scale-105 animate-bounce-gentle'
+                  ? 'text-pet-amber-500 dark:text-pet-amber-400'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               )}
             >
-              <Icon className="w-5 h-5 mb-0.5" />
+              <Icon className={clsx('w-5 h-5 mb-0.5', active && 'scale-110')} />
               <span>{item.label}</span>
             </Link>
           );

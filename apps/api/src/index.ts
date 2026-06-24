@@ -27,13 +27,27 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      // and any *.pages.dev, localhost, or configured CLIENT_URL
+      const allowedPatterns = [
+        /\.pages\.dev$/,
+        /localhost/,
+        /127\.0\.0\.1/,
+      ];
+      const clientUrl = process.env.CLIENT_URL;
+      if (!origin || (clientUrl && origin === clientUrl) || allowedPatterns.some(p => p.test(origin || ''))) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow all in production for now
+      }
+    },
     credentials: true,
   })
 );
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Passport initialization
 app.use(passport.initialize());

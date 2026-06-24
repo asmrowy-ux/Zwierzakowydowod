@@ -3,7 +3,7 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
-import { Phone, Mail, Heart, AlertTriangle, MessageSquare, Send, Check } from 'lucide-react';
+import { Phone, Mail, Heart, AlertTriangle, Check } from 'lucide-react';
 import { FinderForm } from './FinderForm';
 
 export const runtime = 'edge';
@@ -20,21 +20,33 @@ interface PublicPetPageProps {
 
 // Fetch pet data from API
 async function getPetData(petCode: string) {
-  const rawApiUrl = process.env.API_URL || 'http://localhost:3001';
+  const rawApiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const API_URL = rawApiUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
   try {
     const res = await fetch(`${API_URL}/api/pets/public/${petCode}`, {
-      next: { revalidate: 60 }, // Cache for 60 seconds
+      next: { revalidate: 30 },
+      headers: {
+        'Accept': 'application/json',
+      },
     });
     if (res.ok) {
-      const result = await res.json();
-      return result.data.pet;
+      const text = await res.text();
+      if (!text) return null;
+      const result = JSON.parse(text);
+      return result?.data?.pet || null;
     }
+    console.error('API returned status:', res.status);
   } catch (e) {
     console.error('API connection failed:', e);
   }
 
   return null;
+}
+
+// Safe visibility check helper
+function isVisible(pet: any, key: string): boolean {
+  if (!pet?.visibilitySettings) return true; // Default to visible if no settings
+  return pet.visibilitySettings[key] !== false;
 }
 
 export default async function PublicPetPage({ params, searchParams }: PublicPetPageProps) {
@@ -60,6 +72,9 @@ export default async function PublicPetPage({ params, searchParams }: PublicPetP
   const isLost = pet.status === 'lost';
   const showReportedSuccess = reported === 'success';
 
+  // Safe defaults for visibility
+  const vis = pet.visibilitySettings || {};
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-pet-cream to-slate-100 dark:from-slate-900 dark:to-slate-950 pb-16">
       {/* Top Banner */}
@@ -68,7 +83,7 @@ export default async function PublicPetPage({ params, searchParams }: PublicPetP
         {t('common.appName')} — {t('common.tagline')}
       </div>
 
-      <div className="max-w-xl mx-auto px-4 mt-6 space-y-6">
+      <div className="max-w-xl mx-auto px-3 sm:px-4 mt-4 sm:mt-6 space-y-4 sm:space-y-6">
         {/* Success Banner */}
         {showReportedSuccess && (
           <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/50 rounded-2xl flex items-center gap-3 text-green-800 dark:text-green-300 font-semibold text-sm animate-scale-in">
@@ -82,26 +97,39 @@ export default async function PublicPetPage({ params, searchParams }: PublicPetP
           </div>
         )}
 
+        {/* Lost Alert Banner */}
+        {isLost && (
+          <div className="p-4 bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-800 rounded-2xl text-center animate-pulse-slow">
+            <p className="text-red-700 dark:text-red-300 font-bold text-sm">
+              ⚠️ Ten pupil jest zgubiony! Jeśli go widzisz, skontaktuj się z właścicielem!
+            </p>
+          </div>
+        )}
+
         {/* Pet Card Header */}
-        <Card className="glass overflow-hidden p-6 relative">
-          <div className="absolute top-6 right-6">
-            <Badge variant={pet.status}>
-              {t(`status.${pet.status}`)}
+        <Card className="glass overflow-hidden p-4 sm:p-6 relative">
+          <div className="absolute top-4 sm:top-6 right-4 sm:right-6">
+            <Badge variant={pet.status || 'home'}>
+              {t(`status.${pet.status || 'home'}`)}
             </Badge>
           </div>
 
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-3 sm:gap-4 items-center">
             {/* Visual Profile */}
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-pet-amber-100 to-pet-orange-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-4xl shadow-sm shrink-0 border border-slate-200/50 dark:border-slate-700/50">
-              {pet.species === 'dog' ? '🐶' : pet.species === 'cat' ? '🐱' : '🐾'}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-pet-amber-100 to-pet-orange-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-3xl sm:text-4xl shadow-sm shrink-0 border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+              {pet.profilePhotoUrl ? (
+                <img src={pet.profilePhotoUrl} alt={pet.name || 'Pet'} className="w-full h-full object-cover" />
+              ) : (
+                pet.species === 'dog' ? '🐶' : pet.species === 'cat' ? '🐱' : '🐾'
+              )}
             </div>
 
-            <div className="space-y-1">
-              <h1 className="font-display text-2xl font-bold text-slate-800 dark:text-white">
-                {pet.visibilitySettings.showName ? pet.name : '🐾 PROTECTED PROFILE'}
+            <div className="space-y-1 min-w-0">
+              <h1 className="font-display text-xl sm:text-2xl font-bold text-slate-800 dark:text-white truncate">
+                {vis.showName !== false ? (pet.name || 'Pupil') : '🐾 PROFIL CHRONIONY'}
               </h1>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                {pet.breed || t(`pet.${pet.species}`)}
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide truncate">
+                {pet.breed || (pet.species ? t(`pet.${pet.species}`) : '')}
               </p>
               <p className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded font-mono font-bold tracking-tight inline-block border border-slate-200/60 dark:border-slate-700/50">
                 {pet.petCode}
@@ -111,8 +139,8 @@ export default async function PublicPetPage({ params, searchParams }: PublicPetP
         </Card>
 
         {/* Finder Message Note */}
-        {pet.visibilitySettings.showFinderNote && pet.finderNote && (
-          <Card className="border border-red-200/60 dark:border-red-900/30 bg-red-50/30 dark:bg-red-950/10 p-6 space-y-3">
+        {vis.showFinderNote !== false && pet.finderNote && (
+          <Card className="border border-red-200/60 dark:border-red-900/30 bg-red-50/30 dark:bg-red-950/10 p-4 sm:p-6 space-y-3">
             <h3 className="font-display font-bold text-red-650 dark:text-red-400 text-sm flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               {t('publicProfile.finderNote')}
@@ -124,26 +152,26 @@ export default async function PublicPetPage({ params, searchParams }: PublicPetP
         )}
 
         {/* Owner Contact */}
-        <Card className="glass p-6 space-y-4">
+        <Card className="glass p-4 sm:p-6 space-y-4">
           <h3 className="font-display font-bold text-slate-800 dark:text-white text-sm">
             {t('publicProfile.contactOwner')}
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {pet.visibilitySettings.showPhone && pet.owner.phone && (
+            {vis.showPhone !== false && pet.owner?.phone && (
               <a
                 href={`tel:${pet.owner.phone}`}
-                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-pet-amber-50 dark:bg-slate-800 text-pet-amber-700 dark:text-pet-amber-400 border border-pet-amber-200/60 dark:border-slate-700 hover:scale-102 transition-transform duration-300 font-semibold text-sm"
+                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-pet-amber-50 dark:bg-slate-800 text-pet-amber-700 dark:text-pet-amber-400 border border-pet-amber-200/60 dark:border-slate-700 hover:scale-102 transition-transform duration-300 font-semibold text-sm active:scale-95"
               >
                 <Phone className="w-4 h-4" />
                 {t('publicProfile.call')}
               </a>
             )}
 
-            {pet.visibilitySettings.showEmail && pet.owner.email && (
+            {vis.showEmail !== false && pet.owner?.email && (
               <a
                 href={`mailto:${pet.owner.email}`}
-                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-pet-teal-50 dark:bg-slate-800 text-pet-teal-700 dark:text-pet-teal-400 border border-pet-teal-200/60 dark:border-slate-700 hover:scale-102 transition-transform duration-300 font-semibold text-sm"
+                className="flex items-center justify-center gap-2 p-3 rounded-xl bg-pet-teal-50 dark:bg-slate-800 text-pet-teal-700 dark:text-pet-teal-400 border border-pet-teal-200/60 dark:border-slate-700 hover:scale-102 transition-transform duration-300 font-semibold text-sm active:scale-95"
               >
                 <Mail className="w-4 h-4" />
                 {t('publicProfile.sendEmail')}
@@ -153,8 +181,8 @@ export default async function PublicPetPage({ params, searchParams }: PublicPetP
         </Card>
 
         {/* Medical Info Section */}
-        {pet.visibilitySettings.showMedicalInfo && pet.medicalInfo && (
-          <Card className="glass p-6 space-y-4">
+        {vis.showMedicalInfo !== false && pet.medicalInfo && Object.keys(pet.medicalInfo).length > 0 && (
+          <Card className="glass p-4 sm:p-6 space-y-4">
             <h3 className="font-display font-bold text-slate-800 dark:text-white text-sm flex items-center gap-2">
               <Heart className="w-4.5 h-4.5 text-red-500" />
               {t('publicProfile.medicalInfo')}
@@ -183,7 +211,7 @@ export default async function PublicPetPage({ params, searchParams }: PublicPetP
                 </div>
               )}
 
-              {pet.microchipNumber && pet.visibilitySettings.showMicrochip && (
+              {pet.microchipNumber && vis.showMicrochip !== false && (
                 <div className="pt-2 flex justify-between gap-4">
                   <span className="font-semibold text-slate-500 dark:text-slate-400">
                     Microchip:
@@ -198,8 +226,8 @@ export default async function PublicPetPage({ params, searchParams }: PublicPetP
         )}
 
         {/* "I Found This Pet!" Location Report Submission Form */}
-        {pet.visibilitySettings.showFoundButton && (
-          <Card className="border border-pet-orange-200 bg-white/60 dark:bg-slate-900/60 p-6 space-y-4">
+        {vis.showFoundButton !== false && (
+          <Card className="border border-pet-orange-200 bg-white/60 dark:bg-slate-900/60 p-4 sm:p-6 space-y-4">
             <div className="text-center sm:text-left">
               <h3 className="font-display font-bold text-pet-orange-600 dark:text-pet-orange-400 text-lg">
                 {t('publicProfile.foundButton')}

@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter, Link } from '@/i18n/navigation';
-import Card, { CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input, { Select, Textarea } from '@/components/ui/Input';
-import { ArrowLeft, ArrowRight, Save, Image as ImageIcon, Check, Eye } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Image as ImageIcon, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 export const runtime = 'edge';
@@ -23,13 +23,15 @@ export default function EditPetPage({ params }: EditPetPageProps) {
   const tCommon = useTranslations('common');
   const router = useRouter();
   
-  // Resolve params
-  const resolvedParams = React.use(params);
+  // Resolve params once
+  const resolvedParams = use(params);
   const petId = resolvedParams.petId;
 
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPet, setIsLoadingPet] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -60,6 +62,8 @@ export default function EditPetPage({ params }: EditPetPageProps) {
   });
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchPetData = async () => {
       const token = localStorage.getItem('pet-id-token');
       if (!token) {
@@ -76,11 +80,17 @@ export default function EditPetPage({ params }: EditPetPageProps) {
         });
 
         if (!res.ok) {
-          throw new Error('Failed to fetch pet details');
+          if (res.status === 401) {
+            router.push('/login');
+            return;
+          }
+          throw new Error('Nie udało się pobrać danych zwierzaka');
         }
 
         const result = await res.json();
         const pet = result.data.pet;
+
+        if (cancelled) return;
 
         setName(pet.name || '');
         setSpecies(pet.species || 'dog');
@@ -105,16 +115,20 @@ export default function EditPetPage({ params }: EditPetPageProps) {
             ...pet.visibilitySettings,
           }));
         }
-      } catch (err) {
-        console.error('Error fetching pet data:', err);
-        alert('Błąd podczas pobierania danych zwierzaka. Powrót do pulpitu...');
-        router.push('/dashboard');
+      } catch (err: any) {
+        if (!cancelled) {
+          console.error('Error fetching pet data:', err);
+          setLoadError(err.message || 'Błąd podczas pobierania danych');
+        }
       } finally {
-        setIsLoadingPet(false);
+        if (!cancelled) {
+          setIsLoadingPet(false);
+        }
       }
     };
 
     fetchPetData();
+    return () => { cancelled = true; };
   }, [petId, router]);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,7 +144,7 @@ export default function EditPetPage({ params }: EditPetPageProps) {
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
-          const img = new Image();
+          const img = new window.Image();
           img.onload = () => {
             try {
               const canvas = document.createElement('canvas');
@@ -164,18 +178,15 @@ export default function EditPetPage({ params }: EditPetPageProps) {
               alert('Błąd przetwarzania obrazu: ' + err.message);
             }
           };
-          img.onerror = (err) => {
-            console.error('Image load error:', err);
+          img.onerror = () => {
             alert('Nie udało się wczytać pliku graficznego.');
           };
           img.src = event.target?.result as string;
         } catch (err: any) {
           console.error('Reader onload error:', err);
-          alert('Błąd odczytu pliku obrazu.');
         }
       };
-      reader.onerror = (err) => {
-        console.error('FileReader error:', err);
+      reader.onerror = () => {
         alert('Błąd odczytu pliku z dysku.');
       };
       reader.readAsDataURL(file);
@@ -203,9 +214,13 @@ export default function EditPetPage({ params }: EditPetPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setSaveSuccess(false);
 
     const token = localStorage.getItem('pet-id-token');
-    if (!token) return;
+    if (!token) {
+      router.push('/login');
+      return;
+    }
 
     try {
       const response = await fetch(`/api/pets/${petId}`, {
@@ -233,12 +248,15 @@ export default function EditPetPage({ params }: EditPetPageProps) {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error?.message || 'Failed to update pet');
+        throw new Error(result.error?.message || 'Nie udało się zaktualizować danych');
       }
 
-      router.push('/dashboard');
+      setSaveSuccess(true);
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
     } catch (err: any) {
-      alert(err.message || 'Error updating pet.');
+      alert(err.message || 'Błąd podczas zapisywania.');
     } finally {
       setIsLoading(false);
     }
@@ -252,8 +270,32 @@ export default function EditPetPage({ params }: EditPetPageProps) {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center relative z-10">
+        <Card className="glass p-8 max-w-md mx-auto text-center space-y-4">
+          <div className="text-4xl">😿</div>
+          <h2 className="font-display text-xl font-bold text-slate-800 dark:text-white">
+            Błąd ładowania
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{loadError}</p>
+          <Button asChild>
+            <Link href="/dashboard">Powrót do pulpitu</Link>
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6 relative z-10 animate-fade-in">
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6 relative z-10 animate-fade-in">
+      {/* Save Success */}
+      {saveSuccess && (
+        <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/50 rounded-2xl flex items-center gap-3 text-green-800 dark:text-green-300 font-semibold text-sm">
+          ✅ Dane zostały zapisane! Przekierowywanie...
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild className="p-2">
@@ -261,8 +303,8 @@ export default function EditPetPage({ params }: EditPetPageProps) {
             <ArrowLeft className="w-5 h-5" />
           </Link>
         </Button>
-        <div>
-          <h1 className="font-display text-2xl font-bold text-slate-800 dark:text-white">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-slate-800 dark:text-white truncate">
             Edycja: {name}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -293,8 +335,8 @@ export default function EditPetPage({ params }: EditPetPageProps) {
       </div>
 
       {/* Form Card */}
-      <Card className="glass p-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <Card className="glass p-4 sm:p-8">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           {/* Step 1: Basic Info */}
           {step === 1 && (
             <div className="space-y-4">
@@ -343,7 +385,7 @@ export default function EditPetPage({ params }: EditPetPageProps) {
                   options={[
                     { value: 'male', label: t('male') },
                     { value: 'female', label: t('female') },
-                    { value: 'unknown', label: 'Unknown' },
+                    { value: 'unknown', label: 'Nieznana' },
                   ]}
                 />
               </div>
@@ -360,14 +402,14 @@ export default function EditPetPage({ params }: EditPetPageProps) {
 
                 <Input
                   label={t('color')}
-                  placeholder="Gold/Cream"
+                  placeholder="Złoty/Kremowy"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                 />
               </div>
 
               <Input
-                label="Microchip Number"
+                label="Numer mikroczipa"
                 placeholder="900115000123456"
                 value={microchipNumber}
                 onChange={(e) => setMicrochipNumber(e.target.value)}
@@ -385,10 +427,10 @@ export default function EditPetPage({ params }: EditPetPageProps) {
               {/* Upload Zone */}
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-pet-amber-500 transition-colors duration-300 bg-white/30 dark:bg-slate-900/30 overflow-hidden min-h-[200px]"
+                className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-pet-amber-500 transition-colors duration-300 bg-white/30 dark:bg-slate-900/30 overflow-hidden min-h-[180px]"
               >
                 {profilePhotoUrl ? (
-                  <div className="relative w-32 h-32 rounded-2xl overflow-hidden border border-slate-200 shadow-sm mx-auto">
+                  <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border border-slate-200 shadow-sm mx-auto">
                     <img src={profilePhotoUrl} alt="Preview" className="w-full h-full object-cover" />
                     <button 
                       type="button"
@@ -409,7 +451,7 @@ export default function EditPetPage({ params }: EditPetPageProps) {
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-350">
                       {t('dragPhoto')}
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">PNG, JPG up to 5MB</p>
+                    <p className="text-xs text-slate-400 mt-1">PNG, JPG do 5MB</p>
                   </>
                 )}
               </div>
@@ -422,8 +464,8 @@ export default function EditPetPage({ params }: EditPetPageProps) {
               />
 
               <Textarea
-                label="Finder Note / Message (instructions for someone who finds your pet)"
-                placeholder="He is very friendly but afraid of storms. Please call my number immediately!"
+                label="Notatka dla znalazcy (instrukcje dla osoby, która znajdzie Twojego pupila)"
+                placeholder="Jest bardzo przyjazny, ale boi się burzy. Proszę natychmiast zadzwonić!"
                 value={finderNote}
                 onChange={(e) => setFinderNote(e.target.value)}
                 rows={4}
@@ -433,7 +475,7 @@ export default function EditPetPage({ params }: EditPetPageProps) {
 
           {/* Step 3: Visibility Flags & Preview */}
           {step === 3 && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div>
                 <h3 className="font-display font-bold text-lg text-slate-800 dark:text-white">
                   {t('visibilityTitle')}
@@ -444,90 +486,51 @@ export default function EditPetPage({ params }: EditPetPageProps) {
               </div>
 
               {/* Checkbox Checklist */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/40 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/80">
-                <label className="flex items-center gap-3 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg select-none">
-                  <input
-                    type="checkbox"
-                    checked={visibility.showName}
-                    onChange={() => handleVisibilityChange('showName')}
-                    className="h-4.5 w-4.5 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400"
-                  />
-                  <span className="text-xs font-semibold text-slate-750 dark:text-slate-300">Show Name</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg select-none">
-                  <input
-                    type="checkbox"
-                    checked={visibility.showPhone}
-                    onChange={() => handleVisibilityChange('showPhone')}
-                    className="h-4.5 w-4.5 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400"
-                  />
-                  <span className="text-xs font-semibold text-slate-750 dark:text-slate-300">{t('showPhone')}</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg select-none">
-                  <input
-                    type="checkbox"
-                    checked={visibility.showEmail}
-                    onChange={() => handleVisibilityChange('showEmail')}
-                    className="h-4.5 w-4.5 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400"
-                  />
-                  <span className="text-xs font-semibold text-slate-750 dark:text-slate-300">{t('showEmail')}</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg select-none">
-                  <input
-                    type="checkbox"
-                    checked={visibility.showAddress}
-                    onChange={() => handleVisibilityChange('showAddress')}
-                    className="h-4.5 w-4.5 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400"
-                  />
-                  <span className="text-xs font-semibold text-slate-750 dark:text-slate-300">{t('showAddress')}</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg select-none">
-                  <input
-                    type="checkbox"
-                    checked={visibility.showMedicalInfo}
-                    onChange={() => handleVisibilityChange('showMedicalInfo')}
-                    className="h-4.5 w-4.5 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400"
-                  />
-                  <span className="text-xs font-semibold text-slate-750 dark:text-slate-300">{t('showMedical')}</span>
-                </label>
-
-                <label className="flex items-center gap-3 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg select-none">
-                  <input
-                    type="checkbox"
-                    checked={visibility.showFinderNote}
-                    onChange={() => handleVisibilityChange('showFinderNote')}
-                    className="h-4.5 w-4.5 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400"
-                  />
-                  <span className="text-xs font-semibold text-slate-750 dark:text-slate-300">Show Instructions</span>
-                </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 bg-white/40 dark:bg-slate-900/40 p-3 sm:p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/80">
+                {[
+                  { key: 'showName' as const, label: 'Pokaż imię' },
+                  { key: 'showPhone' as const, label: t('showPhone') },
+                  { key: 'showEmail' as const, label: t('showEmail') },
+                  { key: 'showAddress' as const, label: t('showAddress') },
+                  { key: 'showMedicalInfo' as const, label: t('showMedical') },
+                  { key: 'showFinderNote' as const, label: 'Pokaż notatkę' },
+                  { key: 'showMicrochip' as const, label: 'Pokaż mikroczip' },
+                  { key: 'showFoundButton' as const, label: 'Pokaż przycisk "Znalazłem"' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-3 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg select-none">
+                    <input
+                      type="checkbox"
+                      checked={visibility[key]}
+                      onChange={() => handleVisibilityChange(key)}
+                      className="h-4 w-4 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400 accent-amber-500"
+                    />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{label}</span>
+                  </label>
+                ))}
               </div>
 
               {/* Public Preview Overlay */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5" />
-                  Live Preview of Public Page
+                  Podgląd profilu publicznego
                 </h4>
                 
-                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-850 bg-slate-100/50 dark:bg-slate-900/40 p-5 space-y-4">
+                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/40 p-4 sm:p-5 space-y-4">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-display text-lg font-bold text-slate-850 dark:text-white">
-                        {visibility.showName ? (name || 'Pet Name') : '🐾 PROTECTED PROFILE'}
+                    <div className="min-w-0">
+                      <h4 className="font-display text-lg font-bold text-slate-800 dark:text-white truncate">
+                        {visibility.showName ? (name || 'Imię pupila') : '🐾 PROFIL CHRONIONY'}
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                         {breed || species}
                       </p>
                     </div>
-                    <Badge variant="lost">LOST</Badge>
+                    <Badge variant="home">W domu</Badge>
                   </div>
 
                   {visibility.showFinderNote && finderNote && (
-                    <div className="p-3 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-slate-700 dark:text-slate-350 leading-relaxed italic">
+                    <div className="p-3 bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
                       📢 {finderNote}
                     </div>
                   )}
@@ -535,15 +538,23 @@ export default function EditPetPage({ params }: EditPetPageProps) {
                   <div className="space-y-2 text-xs">
                     {visibility.showPhone && (
                       <p className="text-slate-600 dark:text-slate-400 font-semibold">
-                        📞 Phone: <span className="text-slate-800 dark:text-white font-bold">+48 123 456 789</span>
+                        📞 Telefon: <span className="text-slate-800 dark:text-white font-bold">+48 *** *** ***</span>
                       </p>
                     )}
                     {visibility.showEmail && (
                       <p className="text-slate-600 dark:text-slate-400 font-semibold">
-                        ✉️ Email: <span className="text-slate-800 dark:text-white font-bold">owner@mail.com</span>
+                        ✉️ Email: <span className="text-slate-800 dark:text-white font-bold">***@mail.com</span>
                       </p>
                     )}
                   </div>
+
+                  {visibility.showFoundButton && (
+                    <div className="p-3 bg-pet-orange-50 dark:bg-pet-orange-950/20 border border-pet-orange-200 dark:border-pet-orange-800/30 rounded-xl text-center">
+                      <span className="text-xs font-bold text-pet-orange-600 dark:text-pet-orange-400">
+                        🔍 Znalazłem tego pupila!
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

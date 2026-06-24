@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { QRCodeSVG } from 'qrcode.react';
 import { Plus, QrCode, Edit2, Eye, Trash2, Calendar, MapPin, Settings } from 'lucide-react';
+import { useLocale } from 'next-intl';
 
 export const runtime = 'edge';
 
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const tPet = useTranslations('pet');
   const tStatus = useTranslations('status');
   const router = useRouter();
+  const locale = useLocale();
   
   const [userName, setUserName] = useState('');
   const [pets, setPets] = useState<Pet[]>([]);
@@ -159,9 +161,9 @@ export default function DashboardPage() {
 
   const getPublicProfileUrl = (petCode: string) => {
     if (typeof window !== 'undefined') {
-      return `${window.location.origin}/p/${petCode}`;
+      return `${window.location.origin}/${locale}/p/${petCode}`;
     }
-    return `/p/${petCode}`;
+    return `/${locale}/p/${petCode}`;
   };
 
   if (isLoading) {
@@ -212,7 +214,7 @@ export default function DashboardPage() {
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {pets.map((pet) => {
             const publicUrl = getPublicProfileUrl(pet.petCode);
             

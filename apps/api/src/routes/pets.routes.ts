@@ -261,50 +261,82 @@ router.get(
         throw new NotFoundError('Pet');
       }
 
-      // Apply visibility settings
-      const visibility = (pet.visibilitySettings || {}) as Record<string, boolean>;
-      const isVisible = (key: string) => {
-        const mapping: Record<string, string> = {
-          name: 'showName',
-          species: 'showSpecies',
-          breed: 'showBreed',
-          color: 'showColor',
-          microchip: 'showMicrochip',
-          photo: 'showPhoto',
-          finderNote: 'showFinderNote',
-          ownerEmail: 'showEmail',
-          ownerPhone: 'showPhone',
-          medicalInfo: 'showMedicalInfo',
-        };
-        const feKey = mapping[key] || `show${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-        return visibility[key] !== false && visibility[feKey] !== false;
+      // Normalize visibility settings — DB may store short keys (name, photo)
+      // or full keys (showName, showPhoto). We normalize to showXxx format for frontend.
+      const rawVisibility = (pet.visibilitySettings || {}) as Record<string, boolean>;
+      
+      // Map from short DB keys to showXxx format
+      const keyMap: Record<string, string> = {
+        name: 'showName',
+        species: 'showSpecies',
+        breed: 'showBreed',
+        color: 'showColor',
+        microchip: 'showMicrochip',
+        photo: 'showPhoto',
+        finderNote: 'showFinderNote',
+        ownerEmail: 'showEmail',
+        ownerPhone: 'showPhone',
+        medicalInfo: 'showMedicalInfo',
+        foundButton: 'showFoundButton',
+        address: 'showAddress',
+      };
+
+      // Build normalized visibility with defaults
+      const normalizedVisibility: Record<string, boolean> = {
+        showName: true,
+        showSpecies: true,
+        showPhoto: true,
+        showPhone: true,
+        showEmail: true,
+        showAddress: false,
+        showMedicalInfo: true,
+        showMicrochip: false,
+        showFinderNote: true,
+        showFoundButton: true,
+        showBreed: true,
+        showColor: true,
+      };
+
+      // Override defaults with values from DB (handle both key formats)
+      for (const [key, value] of Object.entries(rawVisibility)) {
+        if (key.startsWith('show')) {
+          // Already in showXxx format
+          normalizedVisibility[key] = value;
+        } else if (keyMap[key]) {
+          // Short format — convert to showXxx
+          normalizedVisibility[keyMap[key]] = value;
+        }
+      }
+
+      const isVisible = (showKey: string): boolean => {
+        return normalizedVisibility[showKey] !== false;
       };
 
       const publicPet: Record<string, unknown> = {
         petCode: pet.petCode,
         status: pet.status,
         customEmoji: pet.customEmoji,
-        finderNote: isVisible('finderNote') ? pet.finderNote : null,
+        finderNote: isVisible('showFinderNote') ? pet.finderNote : null,
         themeSettings: pet.themeSettings,
-        profilePhotoUrl: isVisible('photo') ? pet.profilePhotoUrl : null,
+        profilePhotoUrl: isVisible('showPhoto') ? pet.profilePhotoUrl : null,
         backgroundUrl: pet.backgroundUrl,
-        visibilitySettings: visibility,
+        visibilitySettings: normalizedVisibility,
       };
 
-      if (isVisible('name')) publicPet.name = pet.name;
-      if (isVisible('species')) publicPet.species = pet.species;
-      if (isVisible('breed')) publicPet.breed = pet.breed;
-      if (isVisible('color')) publicPet.color = pet.color;
-      if (isVisible('microchip')) publicPet.microchipNumber = pet.microchipNumber;
-      if (isVisible('photo')) publicPet.photos = (pet as any).photos;
-      if (isVisible('medicalInfo')) publicPet.medicalInfo = pet.medicalInfo;
+      if (isVisible('showName')) publicPet.name = pet.name;
+      if (isVisible('showSpecies')) publicPet.species = pet.species;
+      if (isVisible('showBreed')) publicPet.breed = pet.breed;
+      if (isVisible('showColor')) publicPet.color = pet.color;
+      if (isVisible('showMicrochip')) publicPet.microchipNumber = pet.microchipNumber;
+      if (isVisible('showPhoto')) publicPet.photos = (pet as any).photos;
+      if (isVisible('showMedicalInfo')) publicPet.medicalInfo = pet.medicalInfo;
 
       const ownerInfo: Record<string, unknown> = {
         displayName: (pet as any).owner.displayName,
         avatarUrl: (pet as any).owner.avatarUrl,
       };
-      if (isVisible('ownerEmail')) ownerInfo.email = (pet as any).owner.email;
-      if (isVisible('ownerPhone')) ownerInfo.phone = (pet as any).owner.phone;
+      if (isVisible('showEmail')) ownerInfo.email = (pet as any).owner.email;
+      if (isVisible('showPhone')) ownerInfo.phone = (pet as any).owner.phone;
 
       publicPet.owner = ownerInfo;
 

@@ -3,15 +3,13 @@
 import React, { useState } from 'react';
 import Input, { Textarea } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
-import { MapPin, Send, MessageSquare } from 'lucide-react';
-import { useRouter } from '@/i18n/navigation';
+import { MapPin, Send } from 'lucide-react';
 
 interface FinderFormProps {
   petCode: string;
 }
 
 export function FinderForm({ petCode }: FinderFormProps) {
-  const router = useRouter();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
@@ -23,11 +21,13 @@ export function FinderForm({ petCode }: FinderFormProps) {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationSuccess, setLocationSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   // Retrieve GPS Coordinates
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
+      alert('Geolokalizacja nie jest obsługiwana przez Twoją przeglądarkę');
       return;
     }
 
@@ -39,9 +39,9 @@ export function FinderForm({ petCode }: FinderFormProps) {
         setIsGettingLocation(false);
         setLocationSuccess(true);
       },
-      (error) => {
-        console.error('Error getting location:', error);
-        alert('Could not access your location. Please type your message manually.');
+      (err) => {
+        console.error('Error getting location:', err);
+        alert('Nie udało się pobrać lokalizacji. Możesz wpisać wiadomość ręcznie.');
         setIsGettingLocation(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -51,49 +51,71 @@ export function FinderForm({ petCode }: FinderFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
 
     try {
+      // Use the API proxy (client-side fetch goes through Next.js rewrite)
       const response = await fetch(`/api/found/${petCode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          finderName: name,
-          finderPhone: phone,
-          message,
-          latitude,
-          longitude,
+          finderName: name || undefined,
+          finderPhone: phone || undefined,
+          message: message || undefined,
+          latitude: latitude || undefined,
+          longitude: longitude || undefined,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit found report');
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error?.message || 'Nie udało się wysłać zgłoszenia');
       }
 
-      // Success redirect/refresh
-      router.push(`/p/${petCode}?reported=success`);
-    } catch (err) {
-      alert('Submitted found report (offline layout mode simulated successfully!)');
-      router.push(`/p/${petCode}?reported=success`);
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error('Found report submission error:', err);
+      setError(err.message || 'Wystąpił błąd. Spróbuj ponownie.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (submitted) {
+    return (
+      <div className="text-center p-6 space-y-3 animate-scale-in">
+        <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center text-3xl mx-auto">
+          ✅
+        </div>
+        <h4 className="font-display font-bold text-green-700 dark:text-green-400 text-lg">
+          Zgłoszenie wysłane!
+        </h4>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Właściciel został powiadomiony o znalezieniu pupila. Dziękujemy! 🐾
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+      {error && (
+        <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-400 font-semibold">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
           placeholder="Twoje imię"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          required
         />
         <Input
           placeholder="Twój numer telefonu"
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          required
         />
       </div>
 
@@ -126,14 +148,10 @@ export function FinderForm({ petCode }: FinderFormProps) {
         </span>
       </button>
 
-      {/* Hidden coordinates */}
-      {latitude && <input type="hidden" name="latitude" value={latitude} />}
-      {longitude && <input type="hidden" name="longitude" value={longitude} />}
-
       <Button
         type="submit"
         variant="primary"
-        className="w-full bg-gradient-to-r from-pet-orange-500 to-red-500 hover:from-pet-orange-400 hover:to-red-400 font-bold py-3 text-sm flex items-center justify-center gap-2 shadow-md animate-pulse-slow"
+        className="w-full bg-gradient-to-r from-pet-orange-500 to-red-500 hover:from-pet-orange-400 hover:to-red-400 font-bold py-3 text-sm flex items-center justify-center gap-2 shadow-md"
         isLoading={isLoading}
         icon={<Send className="w-4 h-4" />}
       >

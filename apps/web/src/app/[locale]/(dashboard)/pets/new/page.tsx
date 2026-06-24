@@ -60,7 +60,7 @@ export default function NewPetPage() {
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
-          const img = new Image();
+          const img = new window.Image();
           img.onload = () => {
             try {
               const canvas = document.createElement('canvas');
@@ -166,8 +166,7 @@ export default function NewPetPage() {
 
       router.push('/dashboard');
     } catch (err: any) {
-      alert(err.message || 'Error creating pet. Redirecting to dashboard...');
-      router.push('/dashboard');
+      alert(err.message || 'Błąd podczas tworzenia pupila.');
     } finally {
       setIsLoading(false);
     }
@@ -214,8 +213,8 @@ export default function NewPetPage() {
       </div>
 
       {/* Form Card */}
-      <Card className="glass p-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <Card className="glass p-4 sm:p-8">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           {/* Step 1: Basic Info */}
           {step === 1 && (
             <div className="space-y-4">
@@ -424,6 +423,16 @@ export default function NewPetPage() {
                     className="h-4.5 w-4.5 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400"
                   />
                   <span className="text-xs font-semibold text-slate-750 dark:text-slate-300">Show Instructions</span>
+                </label>
+
+                <label className="flex items-center gap-3 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg select-none">
+                  <input
+                    type="checkbox"
+                    checked={visibility.showFoundButton}
+                    onChange={() => handleVisibilityChange('showFoundButton')}
+                    className="h-4 w-4 rounded border-slate-300 text-pet-amber-600 focus:ring-pet-amber-400 accent-amber-500"
+                  />
+                  <span className="text-xs font-semibold text-slate-750 dark:text-slate-300">Pokaż przycisk &quot;Znalazłem&quot;</span>
                 </label>
               </div>
 

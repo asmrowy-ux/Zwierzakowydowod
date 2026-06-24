@@ -47,7 +47,7 @@ model Pet {
   status             String   @default("home")
   customEmoji        String?  @map("custom_emoji")
   medicalInfo        Json     @default("{}") @map("medical_info")
-  visibilitySettings Json     @default("{\"name\":true,\"photo\":true,\"species\":true,\"breed\":true,\"color\":true,\"microchip\":false,\"ownerPhone\":false,\"ownerEmail\":true}") @map("visibility_settings")
+  visibilitySettings Json     @default("{\"showName\":true,\"showPhoto\":true,\"showSpecies\":true,\"showBreed\":true,\"showColor\":true,\"showMicrochip\":false,\"showPhone\":true,\"showEmail\":true,\"showMedicalInfo\":true,\"showFinderNote\":true,\"showFoundButton\":true,\"showAddress\":false}") @map("visibility_settings")
   themeSettings      Json     @default("{\"primaryColor\":\"#6C63FF\",\"layout\":\"classic\"}") @map("theme_settings")
   finderNote         String?  @map("finder_note")
   profilePhotoUrl    String?  @map("profile_photo_url")

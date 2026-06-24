@@ -56,6 +56,7 @@ export const createPetSchema = z.object({
 export const updatePetSchema = createPetSchema.partial();
 
 export const updateVisibilitySchema = z.object({
+  // Short format keys (legacy)
   name: z.boolean().optional(),
   photo: z.boolean().optional(),
   species: z.boolean().optional(),
@@ -64,6 +65,19 @@ export const updateVisibilitySchema = z.object({
   microchip: z.boolean().optional(),
   ownerPhone: z.boolean().optional(),
   ownerEmail: z.boolean().optional(),
+  // showXxx format keys (new standard)
+  showName: z.boolean().optional(),
+  showPhoto: z.boolean().optional(),
+  showSpecies: z.boolean().optional(),
+  showBreed: z.boolean().optional(),
+  showColor: z.boolean().optional(),
+  showMicrochip: z.boolean().optional(),
+  showPhone: z.boolean().optional(),
+  showEmail: z.boolean().optional(),
+  showAddress: z.boolean().optional(),
+  showMedicalInfo: z.boolean().optional(),
+  showFinderNote: z.boolean().optional(),
+  showFoundButton: z.boolean().optional(),
 });
 
 export const updateStatusSchema = z.object({
