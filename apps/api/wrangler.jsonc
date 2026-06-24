@@ -4,5 +4,11 @@
   "main": "src/worker.ts",
   "compatibility_flags": [
     "nodejs_compat"
-  ]
+  ],
+  "vars": {
+    "DATABASE_URL": "postgresql://neondb_owner:npg_UnT6vsKNgao1@ep-royal-waterfall-asy9f1c7-pooler.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+    "DIRECT_URL": "postgresql://neondb_owner:npg_UnT6vsKNgao1@ep-royal-waterfall-asy9f1c7-pooler.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+    "JWT_SECRET": "your-super-secret-jwt-key-change-this",
+    "JWT_REFRESH_SECRET": "your-refresh-token-secret-change-this"
+  }
 }

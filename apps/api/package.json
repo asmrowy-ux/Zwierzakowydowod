@@ -10,9 +10,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "deploy": "wrangler deploy src/worker.ts --name zwierzakowydowod-api --compatibility-flag=nodejs_compat"
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^6.9.0",
     "@prisma/client": "^6.9.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

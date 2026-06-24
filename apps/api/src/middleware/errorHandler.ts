@@ -58,10 +58,8 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
-  // Log error in development
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error:', err);
-  }
+  // Log error
+  console.error('Error:', err);
 
   // Handle AppError instances
   if (err instanceof AppError) {
